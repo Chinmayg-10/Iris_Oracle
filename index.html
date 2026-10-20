@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Iris Oracle</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#13112b; --panel:#1d1a40; --line:#34306b; --text:#ece8ff; --mute:#9d97d1;
+  --gold:#ffc857; --c0:#7fd8ff; --c1:#ff7ad9; --c2:#9b7bff; --accent:#9b7bff;
+  --serif:'Fraunces',Georgia,serif; --sans:'DM Sans',system-ui,sans-serif;
+}
+*{box-sizing:border-box;margin:0}
+body{font-family:var(--sans);color:var(--text);min-height:100vh;
+  background:radial-gradient(1200px 700px at 75% -10%,#2b2570 0%,transparent 60%),
+             radial-gradient(900px 600px at -10% 110%,#3a1f66 0%,transparent 55%),var(--ink);
+  padding:32px 20px 48px}
+.wrap{max-width:1080px;margin:auto}
+header{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap;margin-bottom:28px}
+h1{font-family:var(--serif);font-weight:600;font-size:clamp(2.2rem,5vw,3.6rem);letter-spacing:-.02em;line-height:1}
+.sub{color:var(--mute);margin-top:8px;max-width:46ch;line-height:1.5}
+.status{display:flex;align-items:center;gap:8px;font-size:.85rem;color:var(--mute)}
+.dot{width:10px;height:10px;border-radius:50%;background:#666;transition:.3s}
+.dot.ok{background:#5ee6a8;box-shadow:0 0 10px #5ee6a8}.dot.bad{background:#ff6b7a;box-shadow:0 0 10px #ff6b7a}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:22px}
+@media(max-width:820px){.grid{grid-template-columns:1fr}}
+.card{background:linear-gradient(160deg,rgba(255,255,255,.06),rgba(255,255,255,.015));
+  border:1px solid var(--line);border-radius:22px;padding:24px;backdrop-filter:blur(8px)}
+h2{font-family:var(--serif);font-weight:400;font-size:1.25rem;margin-bottom:18px}
+.slider{margin-bottom:20px}
+.slider .row{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px;font-size:.95rem}
+.slider output{font-family:var(--serif);font-size:1.4rem;color:var(--gold)}
+.slider small{color:var(--mute)}
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:6px;border-radius:6px;
+  background:linear-gradient(90deg,var(--accent) var(--p,50%),var(--line) var(--p,50%));outline:none}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:22px;height:22px;border-radius:50%;
+  background:var(--gold);border:3px solid var(--ink);box-shadow:0 0 0 2px var(--gold),0 0 16px rgba(255,200,87,.6);cursor:grab}
+input[type=range]::-moz-range-thumb{width:18px;height:18px;border-radius:50%;background:var(--gold);border:3px solid var(--ink);box-shadow:0 0 0 2px var(--gold)}
+input[type=range]:focus-visible{outline:2px solid var(--gold);outline-offset:6px}
+.presets{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
+button{font:inherit;cursor:pointer;color:var(--text);background:transparent;border:1px solid var(--line);
+  border-radius:999px;padding:8px 16px;transition:.2s}
+button:hover{border-color:var(--accent);background:rgba(155,123,255,.15)}
+button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.stage{position:relative;display:grid;place-items:center;min-height:300px}
+.stage svg{width:100%;max-width:340px;overflow:visible}
+.stage path,.stage ellipse{transition:all .6s cubic-bezier(.3,1.4,.5,1)}
+.glow{filter:drop-shadow(0 0 22px var(--accent))}
+.result{text-align:center;margin-top:6px}
+.result .name{font-family:var(--serif);font-size:2.2rem;text-transform:capitalize;transition:color .4s}
+.result .conf{color:var(--mute);margin-top:2px}
+.bars{margin-top:18px;display:grid;gap:12px}
+.bar .lbl{display:flex;justify-content:space-between;font-size:.88rem;margin-bottom:5px;text-transform:capitalize}
+.track{height:10px;border-radius:10px;background:rgba(255,255,255,.08);overflow:hidden}
+.fill{height:100%;width:0;border-radius:10px;transition:width .7s cubic-bezier(.2,.9,.3,1)}
+.err{margin-top:14px;padding:12px 14px;border-radius:12px;background:rgba(255,107,122,.12);border:1px solid #ff6b7a;
+  font-size:.88rem;line-height:1.5;display:none}
+.api{margin-top:26px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;color:var(--mute);font-size:.85rem}
+.api input{flex:1;min-width:220px;background:var(--panel);border:1px solid var(--line);color:var(--text);
+  border-radius:10px;padding:9px 12px;font:inherit}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Iris Oracle</h1>
+      <p class="sub">Shape the flower with four measurements. A neural network names the species as you move.</p>
+    </div>
+    <div class="status"><span class="dot" id="dot"></span><span id="statusText">Checking API…</span></div>
+  </header>
+
+  <div class="grid">
+    <section class="card" aria-label="Measurements">
+      <h2>Measurements</h2>
+      <div id="sliders"></div>
+      <div class="presets" id="presets"></div>
+    </section>
+
+    <section class="card" aria-live="polite">
+      <h2>Prediction</h2>
+      <div class="stage">
+        <svg viewBox="-150 -150 300 300" class="glow" id="flower" aria-label="Iris flower that changes with your measurements">
+          <g id="sepals"></g><g id="petals"></g>
+          <circle r="9" fill="#ffc857"/>
+        </svg>
+      </div>
+      <div class="result">
+        <div class="name" id="name">—</div>
+        <div class="conf" id="conf">Waiting for a prediction</div>
+      </div>
+      <div class="bars" id="bars"></div>
+      <div class="err" id="err"></div>
+    </section>
+  </div>
+
+  <div class="api">
+    <label for="base">API address</label>
+    <input id="base" value="http://127.0.0.1:8000" spellcheck="false">
+    <button id="retry">Reconnect</button>
+  </div>
+</div>
+
+<script>
+const FIELDS=[
+  {k:'sepal_length',label:'Sepal length',min:4,max:8,step:.1,v:5.8},
+  {k:'sepal_width', label:'Sepal width', min:2,max:4.5,step:.1,v:3.0},
+  {k:'petal_length',label:'Petal length',min:1,max:7,step:.1,v:4.3},
+  {k:'petal_width', label:'Petal width', min:.1,max:2.5,step:.1,v:1.3},
+];
+const PRESETS={Setosa:[5.1,3.5,1.4,.2],Versicolor:[5.9,2.8,4.3,1.3],Virginica:[6.7,3.1,5.6,2.3]};
+const COLORS=['var(--c0)','var(--c1)','var(--c2)'];
+const HEX=['#7fd8ff','#ff7ad9','#9b7bff'];
+const $=id=>document.getElementById(id);
+const state={};let timer,seq=0;
+
+// Sliders
+FIELDS.forEach(f=>{
+  state[f.k]=f.v;
+  const d=document.createElement('div');d.className='slider';
+  d.innerHTML=`<div class="row"><label for="${f.k}">${f.label} <small>cm</small></label><output id="o_${f.k}"></output></div>
+  <input type="range" id="${f.k}" min="${f.min}" max="${f.max}" step="${f.step}" value="${f.v}">`;
+  $('sliders').append(d);
+  d.querySelector('input').addEventListener('input',e=>{set(f.k,+e.target.value);schedule()});
+});
+function set(k,v){
+  state[k]=v;const f=FIELDS.find(x=>x.k===k),el=$(k);
+  el.value=v;el.style.setProperty('--p',((v-f.min)/(f.max-f.min)*100)+'%');
+  $('o_'+k).textContent=v.toFixed(1);drawFlower();
+}
+Object.entries(PRESETS).forEach(([n,vals])=>{
+  const b=document.createElement('button');b.textContent=n;
+  b.onclick=()=>{FIELDS.forEach((f,i)=>set(f.k,vals[i]));schedule(0)};
+  $('presets').append(b);
+});
+
+// Flower: outer sepals follow sepal size, inner petals follow petal size
+function petalPath(len,wid){
+  return `M0 0C${wid} ${-len*.3} ${wid*.9} ${-len*.85} 0 ${-len}C${-wid*.9} ${-len*.85} ${-wid} ${-len*.3} 0 0Z`;
+}
+function drawFlower(){
+  const s=state, sl=s.sepal_length*14, sw=s.sepal_width*11, pl=s.petal_length*12, pw=s.petal_width*18+8;
+  $('sepals').innerHTML=[0,120,240].map(a=>
+    `<path d="${petalPath(sl,sw)}" transform="rotate(${a+60})" fill="var(--accent)" fill-opacity=".45" stroke="var(--accent)" stroke-width="1.5"/>`).join('');
+  $('petals').innerHTML=[0,120,240].map(a=>
+    `<path d="${petalPath(pl,pw)}" transform="rotate(${a})" fill="var(--accent)" fill-opacity=".9" stroke="#fff" stroke-opacity=".35"/>`).join('');
+}
+
+// API
+const base=()=>$('base').value.replace(/\/$/,'');
+function schedule(ms=250){clearTimeout(timer);timer=setTimeout(predict,ms)}
+function showErr(msg){const e=$('err');e.style.display=msg?'block':'none';e.innerHTML=msg||''}
+function status(ok,t){$('dot').className='dot '+(ok?'ok':'bad');$('statusText').textContent=t}
+
+async function health(){
+  try{
+    const r=await fetch(base()+'/health');const j=await r.json();
+    status(j.model_loaded,j.model_loaded?'API connected, model loaded':'API up, model not loaded');return true;
+  }catch{status(false,'API unreachable');return false}
+}
+
+async function predict(){
+  const id=++seq;
+  try{
+    const r=await fetch(base()+'/predict',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(state)});
+    const j=await r.json();
+    if(id!==seq)return;
+    if(!r.ok)throw new Error(typeof j.detail==='string'?j.detail:JSON.stringify(j.detail));
+    showErr('');status(true,'API connected, model loaded');render(j);
+  }catch(e){
+    if(id!==seq)return;
+    status(false,'API unreachable');
+    showErr(`Could not get a prediction (${e.message}).<br>Check that the server is running at <b>${base()}</b> and that CORS is enabled in <code>main.py</code>.`);
+  }
+}
+
+function render(j){
+  const names=Object.keys(j.probabilities);
+  const idx=Math.max(0,names.indexOf(j.predicted_species));
+  document.documentElement.style.setProperty('--accent',HEX[idx%3]);
+  $('name').textContent=j.predicted_species.replace('Iris-','').replace('Iris ','');
+  $('name').style.color=HEX[idx%3];
+  $('conf').textContent=(j.confidence*100).toFixed(1)+'% confident';
+  $('bars').innerHTML=names.map((n,i)=>`
+    <div class="bar"><div class="lbl"><span>${n.replace('Iris-','')}</span><span>${(j.probabilities[n]*100).toFixed(1)}%</span></div>
+    <div class="track"><div class="fill" data-w="${j.probabilities[n]*100}" style="background:${COLORS[i%3]}"></div></div></div>`).join('');
+  requestAnimationFrame(()=>requestAnimationFrame(()=>
+    document.querySelectorAll('.fill').forEach(f=>f.style.width=f.dataset.w+'%')));
+}
+
+$('retry').onclick=async()=>{if(await health())predict()};
+FIELDS.forEach(f=>set(f.k,f.v));
+health().then(ok=>{if(ok)predict()});
+</script>
+</body>
+</html>
